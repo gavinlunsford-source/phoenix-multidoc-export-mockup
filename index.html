@@ -3,150 +3,185 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Phoenix — Multi-Document Excel Export (Mockup)</title>
+<title>Phoenix — Multi-Document Excel Export (Mockup v3)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#e0f5f0',100:'#adefe5',200:'#86d1ca',300:'#64b6b2',400:'#489b9b',500:'#2d8084',600:'#04646b',700:'#1c585b',800:'#1f4b4b',900:'#20413f' },
+          warning: { 50:'#fefce8',100:'#fef9c3',200:'#fef08a',300:'#fde047',600:'#ca8a04',700:'#a16207' },
+        }
+      }
+    }
+  }
+</script>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .checkbox-lg { width: 18px; height: 18px; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   .fade-in { animation: fadeIn .15s ease-out; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
-  .status-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:9999px; }
-  table.sheet-grid td, table.sheet-grid th { border: 1px solid #e5e7eb; padding: 6px 10px; font-size: 13px; white-space:nowrap; }
+  .slide-up { animation: slideUp .18s cubic-bezier(.2,.9,.3,1); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 12px);} to { opacity: 1; transform: translate(-50%, 0);} }
+  @keyframes toastIn { from { opacity:0; transform: translateX(16px);} to { opacity:1; transform: translateX(0);} }
+  .toast-in { animation: toastIn .2s ease-out; }
+  table.sheet-grid td, table.sheet-grid th { border: 1px solid #e5e7eb; padding: 6px 10px; font-size: 12.5px; white-space:nowrap; }
   table.sheet-grid th { background:#f9fafb; font-weight:600; }
+  .flag-row td { border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-top:none; border-bottom:none; padding: 3px 10px; }
+  input[type=checkbox]{ accent-color:#04646b; }
+  select.template-select { accent-color:#04646b; }
 </style>
 </head>
-<body class="bg-slate-100 min-h-screen pb-24">
+<body class="bg-gray-50 min-h-screen pb-28 text-gray-900">
 
 <!-- Prototype banner -->
-<div class="bg-amber-400 text-amber-950 text-center text-xs font-semibold py-1.5">
-  <i class="fa-solid fa-flask"></i> Interactive Prototype — not real data, nothing here saves or exports a real file
+<div class="bg-warning-200 text-warning-700 text-center text-xs font-semibold py-1.5">
+  <i class="fa-solid fa-flask"></i> Interactive Prototype — restyled to match Phoenix's actual colors/components. Nothing here saves or exports a real file.
 </div>
 
 <!-- App header -->
-<div class="bg-white border-b border-slate-200">
+<div class="bg-white border-b border-gray-200">
   <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+      <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white">
         <i class="fa-solid fa-fire-flame-curved text-sm"></i>
       </div>
       <div>
-        <h1 class="text-sm font-bold text-slate-900 leading-none">Phoenix — Smart Sheeting AI</h1>
-        <p class="text-xs text-slate-500 mt-1">AI Document Dashboard</p>
+        <h1 class="text-sm font-semibold text-gray-900 leading-none">Phoenix — Smart Sheeting AI</h1>
+        <p class="text-xs text-gray-500 mt-1">AI Document Dashboard</p>
       </div>
     </div>
-    <div class="text-xs text-slate-400">Multi-document export — concept mockup</div>
+    <div class="text-xs text-gray-400">Multi-document export — styled concept</div>
   </div>
 </div>
 
 <div class="max-w-6xl mx-auto px-6 mt-6">
 
-  <!-- Cross-client warning banner (shown dynamically) -->
-  <div id="clientWarning" class="hidden fade-in mb-4 flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl px-4 py-3 text-sm">
-    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
-    <div>
-      <div class="font-semibold">Selected documents belong to different clients</div>
-      <div id="clientWarningDetail" class="text-amber-800 mt-0.5"></div>
+  <!-- Cross-client warning banner -->
+  <div id="clientWarning" class="hidden fade-in mb-4 relative rounded-xl border border-warning-200 bg-warning-50 p-4">
+    <button onclick="dismissClientWarning()" class="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded hover:bg-warning-100">
+      <i class="fa-regular fa-xmark text-warning-700"></i>
+    </button>
+    <div class="flex flex-row gap-4">
+      <i class="fa-regular fa-triangle-exclamation text-warning-600 mt-0.5"></i>
+      <div class="flex flex-col gap-1">
+        <p class="text-sm font-semibold text-warning-700">Selected documents belong to different clients</p>
+        <p id="clientWarningDetail" class="text-sm text-warning-600"></p>
+      </div>
     </div>
-    <button onclick="dismissClientWarning()" class="ml-auto text-amber-500 hover:text-amber-700"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-      <div>
-        <h2 class="text-sm font-bold text-slate-900">Documents</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Select multiple documents to export their plans into one Excel workbook, grouped by benefit type.</p>
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div class="px-[25px] py-5 border-b border-gray-200 flex items-center justify-between">
+      <div class="flex flex-col">
+        <h2 class="mb-0.5 text-lg font-semibold text-gray-900">Extraction history</h2>
+        <span class="text-sm text-gray-600">View your most recently processed documents and their extraction status</span>
       </div>
+      <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
+        <i class="fa-regular fa-plus text-xs"></i> New Extraction
+      </button>
     </div>
 
     <table class="w-full text-sm">
       <thead>
-        <tr class="text-left text-xs text-slate-500 border-b border-slate-200">
-          <th class="pl-5 py-2 w-10"><input type="checkbox" id="selectAll" class="checkbox-lg" onchange="toggleAll(this)"></th>
-          <th class="py-2">Document</th>
-          <th class="py-2">Client</th>
-          <th class="py-2">Product Types</th>
-          <th class="py-2">Uploaded</th>
+        <tr class="text-left text-xs font-medium text-gray-500 border-b border-gray-200">
+          <th class="pl-[25px] py-2.5 w-10"><input type="checkbox" id="selectAll" class="w-4 h-4" onchange="toggleAll(this)"></th>
+          <th class="py-2.5">Name</th>
+          <th class="py-2.5">Client</th>
+          <th class="py-2.5">Type</th>
+          <th class="py-2.5">Date added</th>
         </tr>
       </thead>
-      <tbody id="docTableBody"></tbody>
+      <tbody id="docTableBody" class="divide-y divide-gray-100"></tbody>
     </table>
   </div>
 
-  <p class="text-xs text-slate-400 mt-4 text-center">This mockup demonstrates the proposed flow only — layout/branding is illustrative, not final Phoenix UI.</p>
+  <p class="text-xs text-gray-400 mt-4 text-center">Colors/spacing pulled from tailwind.css tokens + DocumentStatusTag.vue — not final pixel-precision, but the real palette.</p>
 </div>
 
-<!-- Bulk action bar -->
-<div id="bulkBar" class="hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white">
-  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-    <div class="text-sm"><span id="selectedCount" class="font-bold">0</span> document(s) selected</div>
-    <div class="flex items-center gap-2">
-      <button onclick="clearSelection()" class="text-xs text-slate-300 hover:text-white px-3 py-2">Clear</button>
-      <button onclick="startExport()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2">
-        <i class="fa-solid fa-file-excel"></i> Export to Excel
+<!-- Stripe-style floating selection pill -->
+<div id="selectionBar" class="hidden fixed bottom-6 left-1/2 slide-up z-40">
+  <div class="bg-gray-900 text-white rounded-full shadow-xl pl-5 pr-2 py-2 flex items-center gap-4">
+    <span class="text-sm font-medium whitespace-nowrap"><span id="selectedCount">0</span> selected</span>
+    <div class="w-px h-5 bg-gray-700"></div>
+    <button onclick="startExport()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-4 py-1.5 rounded-full flex items-center gap-2 transition-colors whitespace-nowrap">
+      <i class="fa-regular fa-file-excel"></i> Export to Excel
+    </button>
+    <button onclick="clearSelection()" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-800 text-gray-300 hover:text-white transition-colors" aria-label="Clear selection">
+      <i class="fa-regular fa-xmark"></i>
+    </button>
+  </div>
+</div>
+
+<!-- Combined "Review before export" modal — only ever shown when there's an actual -->
+<!-- template conflict and/or pending-QA item. Clean selections skip this entirely. -->
+<div id="exportModal" class="hidden fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 px-4">
+  <div class="bg-white rounded-2xl w-full shadow-xl fade-in" style="max-width:28rem">
+    <div class="p-6">
+      <div class="flex h-12 w-12 items-center justify-center rounded-lg px-2 py-2.5 shadow-sm bg-warning-100 text-warning-600 mb-4">
+        <i class="fa-regular fa-file-excel text-lg"></i>
+      </div>
+      <h2 class="mb-1 font-semibold text-gray-900">Quick check before exporting</h2>
+      <p id="exportModalSubtitle" class="mb-4 text-sm text-gray-600"></p>
+
+      <!-- Template conflict section -->
+      <div id="templateSection" class="hidden space-y-3 mb-4"></div>
+
+      <!-- QA pending section -->
+      <div id="qaSection" class="hidden space-y-2"></div>
+    </div>
+    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2 rounded-b-2xl bg-gray-50">
+      <button onclick="closeExportModal()" class="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">Cancel</button>
+      <button onclick="confirmExport()" class="text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+        <i class="fa-regular fa-file-excel"></i> Export to Excel
       </button>
     </div>
   </div>
 </div>
 
-<!-- QA Conflict Modal -->
-<div id="qaModal" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 px-4">
-  <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl fade-in">
-    <div class="px-6 pt-6 pb-4 border-b border-slate-100">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-          <i class="fa-solid fa-clipboard-check"></i>
-        </div>
-        <div>
-          <h3 class="font-bold text-slate-900">Some data hasn't been reviewed yet</h3>
-          <p class="text-xs text-slate-500">The following are still pending QA. You can review them first, or export anyway — pending data will be clearly flagged in the file.</p>
-        </div>
-      </div>
-    </div>
-    <div id="qaList" class="px-6 py-4 space-y-2 max-h-64 overflow-y-auto"></div>
-    <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
-      <button onclick="closeQaModal()" class="text-sm font-semibold text-slate-600 hover:text-slate-900 px-4 py-2">Cancel</button>
-      <button onclick="reviewNow()" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2">Review Now</button>
-      <button onclick="exportAnyway()" class="text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg">Export Anyway</button>
-    </div>
-  </div>
-</div>
-
-<!-- Exported File Preview Modal -->
-<div id="previewModal" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 px-4">
+<!-- Exported File Preview -->
+<div id="previewModal" class="hidden fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 px-4">
   <div class="bg-white rounded-2xl max-w-4xl w-full shadow-xl fade-in max-h-[85vh] flex flex-col">
-    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <i class="fa-solid fa-file-excel text-green-600"></i>
         <div>
-          <h3 class="font-bold text-slate-900 text-sm">Multi-Document-Export.xlsx</h3>
-          <p class="text-xs text-slate-500">Simulated output — this is what the exported workbook would contain</p>
+          <h3 class="font-semibold text-gray-900 text-sm">Multi-Document-Export.xlsx</h3>
+          <p class="text-xs text-gray-400">Simulated file contents — for demonstrating row/column layout only, not a Phoenix UI screen</p>
         </div>
       </div>
-      <button onclick="closePreview()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+      <button onclick="closePreview()" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <div id="templateFootnote" class="hidden mx-6 mt-4 text-xs bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-3 py-2">
-      <i class="fa-solid fa-circle-info"></i> Source documents used different Product Attribute Templates for this benefit type — some attributes may not apply to every plan.
-    </div>
+    <div id="templateFootnote" class="hidden mx-6 mt-4 text-xs bg-brand-50 border border-brand-200 text-brand-800 rounded-lg px-3 py-2"></div>
 
     <div class="flex-1 overflow-auto px-6 py-4" id="sheetContent"></div>
 
-    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+    <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
       <div class="flex items-center gap-1" id="sheetTabs"></div>
     </div>
   </div>
 </div>
 
+<!-- Toast container -->
+<div id="toastContainer" class="fixed top-5 right-5 z-[60] flex flex-col gap-2 w-80"></div>
+
 <script>
 // ---------- Mock data ----------
 const productMeta = {
-  medical: { label: 'Medical', sections: {
-    t1: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Specialist Copay', 'Rx — Generic'],
-    t2: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Telehealth Copay', 'Rx — Generic'],
+  medical: { label: 'Medical', templates: {
+    t1: { label: 'Standard Medical Template', sections: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Specialist Copay', 'Rx — Generic'] },
+    t2: { label: 'Aetna Simplified Template', sections: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Telehealth Copay', 'Rx — Generic'] },
   }},
-  dental: { label: 'Dental', sections: { d1: ['Deductible', 'Preventive Coverage', 'Basic Coverage', 'Major Coverage', 'Orthodontia'] } },
-  vision: { label: 'Vision', sections: { v1: ['Exam Copay', 'Materials Copay', 'Frame Allowance'] } },
+  dental: { label: 'Dental', templates: {
+    d1: { label: 'Standard Dental Template', sections: ['Deductible', 'Preventive Coverage', 'Basic Coverage', 'Major Coverage', 'Orthodontia'] },
+  }},
+  vision: { label: 'Vision', templates: {
+    v1: { label: 'Standard Vision Template', sections: ['Exam Copay', 'Materials Copay', 'Frame Allowance'] },
+  }},
 };
 
 const documents = [
@@ -166,60 +201,60 @@ const documents = [
 ];
 
 const statusBadge = (status) => status === 'complete'
-  ? `<span class="status-pill bg-emerald-100 text-emerald-700"><i class="fa-solid fa-check text-[9px]"></i> Complete</span>`
-  : `<span class="status-pill bg-amber-100 text-amber-700"><i class="fa-solid fa-clock text-[9px]"></i> Needs QA</span>`;
+  ? `<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium" style="background:#F0FDF4;color:#15803D;border-color:#BBF7D0"><i class="fa-regular fa-check" style="color:#22C55E"></i> Complete</span>`
+  : `<span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium" style="background:#FEFCE8;color:#A16207;border-color:#FEF08A"><i class="fa-regular fa-magnifying-glass" style="color:#EAB308"></i> Needs QA</span>`;
 
 let selected = new Set();
 
 function renderTable() {
   const body = document.getElementById('docTableBody');
   body.innerHTML = documents.map(doc => `
-    <tr class="border-b border-slate-100 hover:bg-slate-50">
-      <td class="pl-5 py-3"><input type="checkbox" class="checkbox-lg doc-check" data-id="${doc.id}" ${selected.has(doc.id) ? 'checked' : ''} onchange="toggleDoc(${doc.id}, this)"></td>
+    <tr class="hover:bg-gray-50">
+      <td class="pl-[25px] py-3"><input type="checkbox" class="w-4 h-4 doc-check" data-id="${doc.id}" ${selected.has(doc.id) ? 'checked' : ''} onchange="toggleDoc(${doc.id}, this)"></td>
       <td class="py-3">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2.5">
           <i class="fa-solid fa-file-pdf text-red-400"></i>
-          <span class="font-medium text-slate-800">${doc.name}</span>
+          <span class="font-medium text-gray-800">${doc.name}</span>
         </div>
       </td>
-      <td class="py-3 text-slate-600">${doc.client}</td>
+      <td class="py-3 text-gray-600">${doc.client}</td>
       <td class="py-3">
         <div class="flex flex-wrap gap-1.5">
           ${doc.types.map(t => `
-            <span class="inline-flex items-center gap-1.5 bg-slate-100 rounded-full pl-2 pr-2.5 py-1 text-xs">
-              <span class="font-semibold text-slate-700">${productMeta[t.type].label}</span>
+            <span class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full pl-2 pr-2.5 py-1 text-xs">
+              <span class="font-medium text-gray-700">${productMeta[t.type].label}</span>
               ${statusBadge(t.status)}
             </span>
           `).join('')}
         </div>
       </td>
-      <td class="py-3 text-slate-500">${doc.uploaded}</td>
+      <td class="py-3 text-gray-500">${doc.uploaded}</td>
     </tr>
   `).join('');
 }
 
 function toggleDoc(id, el) {
   if (el.checked) selected.add(id); else selected.delete(id);
-  updateBulkBar();
+  updateSelectionBar();
   updateClientWarning();
 }
 
 function toggleAll(el) {
   selected = new Set(el.checked ? documents.map(d => d.id) : []);
   renderTable();
-  updateBulkBar();
+  updateSelectionBar();
   updateClientWarning();
 }
 
 function clearSelection() {
   selected.clear();
   renderTable();
-  updateBulkBar();
+  updateSelectionBar();
   updateClientWarning();
 }
 
-function updateBulkBar() {
-  const bar = document.getElementById('bulkBar');
+function updateSelectionBar() {
+  const bar = document.getElementById('selectionBar');
   document.getElementById('selectedCount').textContent = selected.size;
   bar.classList.toggle('hidden', selected.size === 0);
 }
@@ -242,42 +277,136 @@ function dismissClientWarning() {
   document.getElementById('clientWarning').classList.add('hidden');
 }
 
+// ---------- Toast ----------
+function showToast({ summary, detail, life = 3000 }) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast-in bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden flex';
+  el.innerHTML = `
+    <div class="w-1 bg-green-500"></div>
+    <div class="flex-1 px-3.5 py-3 flex items-start gap-2.5">
+      <i class="fa-solid fa-circle-check text-green-500 mt-0.5"></i>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-gray-900">${summary}</p>
+        <p class="text-xs text-gray-500 mt-0.5">${detail}</p>
+      </div>
+      <button class="text-gray-300 hover:text-gray-500 mt-0.5" onclick="this.closest('.toast-in').remove()"><i class="fa-solid fa-xmark text-xs"></i></button>
+    </div>
+  `;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), life);
+}
+
 // ---------- Export flow ----------
+// chosenTemplate[productType] = template key to use when that type has a conflict
+let chosenTemplate = {};
 let pendingItems = [];
-let exportIncludesPending = false;
+
+function detectTemplateConflicts(selDocs) {
+  const byType = {};
+  selDocs.forEach(doc => doc.types.forEach(t => {
+    byType[t.type] = byType[t.type] || [];
+    byType[t.type].push(t.template);
+  }));
+
+  const conflicts = {};
+  Object.entries(byType).forEach(([type, templates]) => {
+    const unique = [...new Set(templates)];
+    if (unique.length > 1) {
+      // Default to whichever template is used by the most selected documents (least clicks for the user).
+      const counts = {};
+      templates.forEach(t => counts[t] = (counts[t] || 0) + 1);
+      const majority = unique.sort((a, b) => counts[b] - counts[a])[0];
+      conflicts[type] = { options: unique, default: majority };
+    }
+  });
+  return conflicts;
+}
 
 function startExport() {
   const selDocs = documents.filter(d => selected.has(d.id));
+
+  const templateConflicts = detectTemplateConflicts(selDocs);
+  chosenTemplate = {};
+  Object.entries(templateConflicts).forEach(([type, c]) => chosenTemplate[type] = c.default);
+
   pendingItems = [];
   selDocs.forEach(doc => doc.types.forEach(t => {
     if (t.status === 'need_qa') pendingItems.push({ doc: doc.name, type: productMeta[t.type].label });
   }));
 
-  if (pendingItems.length > 0) {
-    openQaModal();
-  } else {
-    exportIncludesPending = false;
-    buildPreview();
+  const hasTemplateConflicts = Object.keys(templateConflicts).length > 0;
+  const hasPending = pendingItems.length > 0;
+
+  // Nothing to resolve — same templates, everything's QA'd. Just export, no modal.
+  if (!hasTemplateConflicts && !hasPending) {
+    completeExport();
+    return;
   }
+
+  openExportModal(templateConflicts, hasTemplateConflicts, hasPending);
 }
 
-function openQaModal() {
-  document.getElementById('qaList').innerHTML = pendingItems.map(p => `
-    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
-      <i class="fa-solid fa-clock text-amber-500"></i>
-      <div>
-        <div class="font-medium text-slate-800">${p.type}</div>
-        <div class="text-xs text-slate-500">${p.doc}</div>
+function openExportModal(templateConflicts, hasTemplateConflicts, hasPending) {
+  const subtitleParts = [];
+  if (hasTemplateConflicts) subtitleParts.push('some benefit types use different templates across your selected documents');
+  if (hasPending) subtitleParts.push('some data hasn’t passed QA yet');
+  document.getElementById('exportModalSubtitle').textContent =
+    'Before exporting, ' + subtitleParts.join(' and ') + '.';
+
+  const templateSection = document.getElementById('templateSection');
+  if (hasTemplateConflicts) {
+    templateSection.classList.remove('hidden');
+    templateSection.innerHTML = Object.entries(templateConflicts).map(([type, c]) => `
+      <div class="border border-gray-200 rounded-lg px-3 py-2.5">
+        <div class="text-sm font-medium text-gray-800 mb-1.5">${productMeta[type].label} — which template should this sheet use?</div>
+        <select class="template-select w-full text-sm border border-gray-300 rounded-md px-2.5 py-1.5 bg-white" onchange="chosenTemplate['${type}'] = this.value">
+          ${c.options.map(key => `
+            <option value="${key}" ${key === c.default ? 'selected' : ''}>
+              ${productMeta[type].templates[key].label}${key === c.default ? ' (most common in this selection)' : ''}
+            </option>
+          `).join('')}
+        </select>
       </div>
-    </div>
-  `).join('');
-  document.getElementById('qaModal').classList.remove('hidden');
+    `).join('');
+  } else {
+    templateSection.classList.add('hidden');
+    templateSection.innerHTML = '';
+  }
+
+  const qaSection = document.getElementById('qaSection');
+  if (hasPending) {
+    qaSection.classList.remove('hidden');
+    qaSection.innerHTML = `<div class="text-sm font-medium text-gray-800 mb-1.5">Still pending QA (will be flagged in the file)</div>` +
+      pendingItems.map(p => `
+        <div class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm" style="background:#FEFCE8;border:1px solid #FEF08A">
+          <i class="fa-regular fa-clock" style="color:#EAB308"></i>
+          <div>
+            <div class="font-medium text-gray-800">${p.type}</div>
+            <div class="text-xs text-gray-500">${p.doc}</div>
+          </div>
+        </div>
+      `).join('');
+  } else {
+    qaSection.classList.add('hidden');
+    qaSection.innerHTML = '';
+  }
+
+  document.getElementById('exportModal').classList.remove('hidden');
 }
-function closeQaModal() { document.getElementById('qaModal').classList.add('hidden'); }
-function reviewNow() { closeQaModal(); alert('In the real product, this would take you to the QA review screen for the pending item(s).\n\n(No real navigation in this mockup.)'); }
-function exportAnyway() {
-  exportIncludesPending = true;
-  closeQaModal();
+
+function closeExportModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+function confirmExport() {
+  closeExportModal();
+  completeExport();
+}
+
+function completeExport() {
+  showToast({
+    summary: 'Downloaded',
+    detail: 'Multi-Document-Export.xlsx has been saved to your device.',
+  });
   buildPreview();
 }
 
@@ -294,7 +423,7 @@ function buildPreview() {
   window._previewData = { byType };
 
   document.getElementById('sheetTabs').innerHTML = types.map((t, i) => `
-    <button onclick="renderSheet('${t}')" id="tab-${t}" class="text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${i === 0 ? 'bg-white text-indigo-700 border-slate-200' : 'bg-slate-100 text-slate-500 border-transparent'}">
+    <button onclick="renderSheet('${t}')" id="tab-${t}" class="text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${i === 0 ? 'bg-white text-brand-700 border-gray-200' : 'bg-gray-100 text-gray-500 border-transparent'}">
       <i class="fa-solid fa-table-cells text-[10px] mr-1"></i>${productMeta[t].label}
     </button>
   `).join('');
@@ -306,31 +435,54 @@ function buildPreview() {
 function renderSheet(type) {
   Object.keys(window._previewData.byType).forEach(t => {
     const tab = document.getElementById(`tab-${t}`);
-    tab.className = `text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${t === type ? 'bg-white text-indigo-700 border-slate-200' : 'bg-slate-100 text-slate-500 border-transparent'}`;
+    tab.className = `text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${t === type ? 'bg-white text-brand-700 border-gray-200' : 'bg-gray-100 text-gray-500 border-transparent'}`;
   });
 
   const plans = window._previewData.byType[type];
-  const templatesUsed = new Set(plans.map(p => p.template));
-  document.getElementById('templateFootnote').classList.toggle('hidden', templatesUsed.size <= 1);
 
-  const allSections = [...new Set(plans.flatMap(p => productMeta[type].sections[p.template]))];
+  // Use the user's chosen template for this type (if there was a conflict), otherwise
+  // whichever single template all the selected plans already share.
+  const templateKey = chosenTemplate[type] || plans[0].template;
+  const templateLabel = productMeta[type].templates[templateKey].label;
+  const sections = productMeta[type].templates[templateKey].sections;
 
-  let html = `<table class="sheet-grid border-collapse"><thead><tr><th class="text-left">Attribute</th>`;
+  const footnote = document.getElementById('templateFootnote');
+  const mismatchedCount = plans.filter(p => p.template !== templateKey).length;
+  if (mismatchedCount > 0) {
+    footnote.classList.remove('hidden');
+    footnote.innerHTML = `<i class="fa-solid fa-circle-info"></i> Displayed using the "${templateLabel}" — ${mismatchedCount} plan(s) were originally reviewed under a different template, so some attributes below may be blank for them.`;
+  } else {
+    footnote.classList.add('hidden');
+  }
+
+  const anyFlagged = plans.some(p => p.status === 'need_qa');
+
+  let html = `<table class="sheet-grid border-collapse">`;
+
+  if (anyFlagged) {
+    html += `<tr class="flag-row"><td class="bg-white border-0"></td>`;
+    plans.forEach(p => {
+      html += `<td class="text-center" style="background:#FEFCE8">
+        ${p.status === 'need_qa' ? '<span class="text-[10px] font-semibold" style="color:#A16207"><i class="fa-solid fa-triangle-exclamation"></i> Pending QA — not yet reviewed</span>' : ''}
+      </td>`;
+    });
+    html += `</tr>`;
+  }
+
+  html += `<thead><tr><th class="text-left">Attribute</th>`;
   plans.forEach(p => {
-    const flagged = exportIncludesPending && p.status === 'need_qa';
-    html += `<th class="${flagged ? 'bg-amber-100 text-amber-800' : ''}">
+    html += `<th>
       ${p.carrier}
-      ${flagged ? '<div class="text-[10px] font-semibold text-amber-600 mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i> Pending QA</div>' : ''}
-      <div class="text-[10px] font-normal text-slate-400 mt-0.5">${p.doc}</div>
+      <div class="text-[10px] font-normal text-gray-400 mt-0.5">${p.doc}</div>
     </th>`;
   });
   html += `</tr></thead><tbody>`;
 
-  allSections.forEach(section => {
-    html += `<tr><td class="font-medium text-slate-700">${section}</td>`;
+  sections.forEach(section => {
+    html += `<tr><td class="font-medium text-gray-700">${section}</td>`;
     plans.forEach(p => {
-      const has = productMeta[type].sections[p.template].includes(section);
-      html += `<td class="${has ? 'text-slate-600' : 'text-slate-300'}">${has ? mockValue(section) : '—'}</td>`;
+      const has = productMeta[type].templates[p.template].sections.includes(section);
+      html += `<td class="${has ? 'text-gray-600' : 'text-gray-300'}">${has ? mockValue(section) : '—'}</td>`;
     });
     html += `</tr>`;
   });
