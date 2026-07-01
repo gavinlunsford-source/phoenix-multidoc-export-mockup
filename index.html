@@ -41,6 +41,17 @@
   <i class="fa-solid fa-flask"></i> Interactive Prototype — table columns/cells copied from the real AiDashboard.vue + DocumentAiTable.php. Only the checkbox column is new.
 </div>
 
+<!-- Pattern toggle — compare the two Stripe interaction styles side by side -->
+<div class="bg-gray-900 py-2.5">
+  <div class="max-w-6xl mx-auto px-6 flex items-center gap-3">
+    <span class="text-xs text-gray-400 font-medium">Selection pattern:</span>
+    <div class="flex items-center bg-gray-800 rounded-lg p-1 gap-1">
+      <button id="patternBtn-floating" onclick="setPattern('floating')" class="text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">Floating bar</button>
+      <button id="patternBtn-inline" onclick="setPattern('inline')" class="text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">Inline toolbar replacement</button>
+    </div>
+  </div>
+</div>
+
 <!-- App header -->
 <div class="bg-white border-b border-gray-200">
   <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -80,9 +91,7 @@
         <h2 class="mb-0.5 text-lg font-semibold text-gray-900">Extraction history</h2>
         <span class="text-sm text-gray-600">View your most recently processed documents and their extraction status</span>
       </div>
-      <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
-        <i class="fa-regular fa-plus text-xs"></i> New Extraction
-      </button>
+      <div id="headerActions"></div>
     </div>
 
     <!-- Only change to this table vs. production: the leftmost checkbox column. -->
@@ -288,28 +297,84 @@ function renderTable() {
 
 function toggleDoc(id, el) {
   if (el.checked) selected.add(id); else selected.delete(id);
-  updateSelectionBar();
+  updateSelectionUI();
   updateClientWarning();
 }
 
 function toggleAll(el) {
   selected = new Set(el.checked ? documents.map(d => d.id) : []);
   renderTable();
-  updateSelectionBar();
+  updateSelectionUI();
   updateClientWarning();
 }
 
 function clearSelection() {
   selected.clear();
   renderTable();
-  updateSelectionBar();
+  updateSelectionUI();
   updateClientWarning();
 }
 
-function updateSelectionBar() {
-  const bar = document.getElementById('selectionBar');
+// ---------- Two selection patterns, toggle-able for engineer review ----------
+// 'floating'  = Stripe's floating pill at the bottom, header stays static
+// 'inline'    = Stripe's other pattern: the header's "New Extraction" button is
+//               replaced in place by "N selected · Deselect · [actions]"
+let interactionPattern = 'floating';
+
+function setPattern(pattern) {
+  interactionPattern = pattern;
+  ['floating', 'inline'].forEach(p => {
+    const btn = document.getElementById(`patternBtn-${p}`);
+    btn.className = `text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
+      p === pattern ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-gray-200'
+    }`;
+  });
+  updateSelectionUI();
+}
+
+const newExtractionButton = `
+  <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
+    <i class="fa-regular fa-plus text-xs"></i> New Extraction
+  </button>`;
+
+// Light-mode action buttons for the inline header cluster (sits on a white bg,
+// unlike the floating pill which sits on a dark one).
+function inlineClusterHtml(count) {
+  return `
+    <div class="flex items-center gap-4 fade-in">
+      <div class="flex items-center gap-3">
+        <span class="text-sm text-gray-700"><span class="font-semibold">${count}</span> selected</span>
+        <div class="h-4 w-px bg-gray-300"></div>
+        <button onclick="clearSelection()" class="text-sm font-medium text-gray-900 underline decoration-gray-300 hover:decoration-gray-900 underline-offset-2">Deselect</button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openArchiveConfirm()" class="rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
+          <i class="fa-regular fa-box-archive"></i> Archive
+        </button>
+        <button onclick="startExport()" class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
+          <i class="fa-regular fa-file-excel"></i> Export to Excel
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderHeaderActions() {
+  const el = document.getElementById('headerActions');
+  if (interactionPattern === 'inline' && selected.size > 0) {
+    el.innerHTML = inlineClusterHtml(selected.size);
+  } else {
+    el.innerHTML = newExtractionButton;
+  }
+}
+
+function updateSelectionUI() {
   document.getElementById('selectedCount').textContent = selected.size;
-  bar.classList.toggle('hidden', selected.size === 0);
+
+  const floatingBar = document.getElementById('selectionBar');
+  const showFloating = interactionPattern === 'floating' && selected.size > 0;
+  floatingBar.classList.toggle('hidden', !showFloating);
+
+  renderHeaderActions();
 }
 
 let clientWarningDismissed = false;
@@ -563,6 +628,7 @@ function mockValue(section) {
 function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
 
 renderTable();
+setPattern('floating');
 </script>
 </body>
 </html>
