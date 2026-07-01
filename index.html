@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phoenix — Multi-Document Excel Export (Mockup)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .checkbox-lg { width: 18px; height: 18px; }
+  .fade-in { animation: fadeIn .15s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+  .status-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:9999px; }
+  table.sheet-grid td, table.sheet-grid th { border: 1px solid #e5e7eb; padding: 6px 10px; font-size: 13px; white-space:nowrap; }
+  table.sheet-grid th { background:#f9fafb; font-weight:600; }
+</style>
+</head>
+<body class="bg-slate-100 min-h-screen pb-24">
+
+<!-- Prototype banner -->
+<div class="bg-amber-400 text-amber-950 text-center text-xs font-semibold py-1.5">
+  <i class="fa-solid fa-flask"></i> Interactive Prototype — not real data, nothing here saves or exports a real file
+</div>
+
+<!-- App header -->
+<div class="bg-white border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+        <i class="fa-solid fa-fire-flame-curved text-sm"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-slate-900 leading-none">Phoenix — Smart Sheeting AI</h1>
+        <p class="text-xs text-slate-500 mt-1">AI Document Dashboard</p>
+      </div>
+    </div>
+    <div class="text-xs text-slate-400">Multi-document export — concept mockup</div>
+  </div>
+</div>
+
+<div class="max-w-6xl mx-auto px-6 mt-6">
+
+  <!-- Cross-client warning banner (shown dynamically) -->
+  <div id="clientWarning" class="hidden fade-in mb-4 flex items-start gap-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl px-4 py-3 text-sm">
+    <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+    <div>
+      <div class="font-semibold">Selected documents belong to different clients</div>
+      <div id="clientWarningDetail" class="text-amber-800 mt-0.5"></div>
+    </div>
+    <button onclick="dismissClientWarning()" class="ml-auto text-amber-500 hover:text-amber-700"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-bold text-slate-900">Documents</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Select multiple documents to export their plans into one Excel workbook, grouped by benefit type.</p>
+      </div>
+    </div>
+
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-500 border-b border-slate-200">
+          <th class="pl-5 py-2 w-10"><input type="checkbox" id="selectAll" class="checkbox-lg" onchange="toggleAll(this)"></th>
+          <th class="py-2">Document</th>
+          <th class="py-2">Client</th>
+          <th class="py-2">Product Types</th>
+          <th class="py-2">Uploaded</th>
+        </tr>
+      </thead>
+      <tbody id="docTableBody"></tbody>
+    </table>
+  </div>
+
+  <p class="text-xs text-slate-400 mt-4 text-center">This mockup demonstrates the proposed flow only — layout/branding is illustrative, not final Phoenix UI.</p>
+</div>
+
+<!-- Bulk action bar -->
+<div id="bulkBar" class="hidden fixed bottom-0 left-0 right-0 bg-slate-900 text-white">
+  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <div class="text-sm"><span id="selectedCount" class="font-bold">0</span> document(s) selected</div>
+    <div class="flex items-center gap-2">
+      <button onclick="clearSelection()" class="text-xs text-slate-300 hover:text-white px-3 py-2">Clear</button>
+      <button onclick="startExport()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2">
+        <i class="fa-solid fa-file-excel"></i> Export to Excel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- QA Conflict Modal -->
+<div id="qaModal" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 px-4">
+  <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl fade-in">
+    <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900">Some data hasn't been reviewed yet</h3>
+          <p class="text-xs text-slate-500">The following are still pending QA. You can review them first, or export anyway — pending data will be clearly flagged in the file.</p>
+        </div>
+      </div>
+    </div>
+    <div id="qaList" class="px-6 py-4 space-y-2 max-h-64 overflow-y-auto"></div>
+    <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+      <button onclick="closeQaModal()" class="text-sm font-semibold text-slate-600 hover:text-slate-900 px-4 py-2">Cancel</button>
+      <button onclick="reviewNow()" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700 px-4 py-2">Review Now</button>
+      <button onclick="exportAnyway()" class="text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg">Export Anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- Exported File Preview Modal -->
+<div id="previewModal" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 px-4">
+  <div class="bg-white rounded-2xl max-w-4xl w-full shadow-xl fade-in max-h-[85vh] flex flex-col">
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-file-excel text-green-600"></i>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Multi-Document-Export.xlsx</h3>
+          <p class="text-xs text-slate-500">Simulated output — this is what the exported workbook would contain</p>
+        </div>
+      </div>
+      <button onclick="closePreview()" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div id="templateFootnote" class="hidden mx-6 mt-4 text-xs bg-blue-50 border border-blue-200 text-blue-800 rounded-lg px-3 py-2">
+      <i class="fa-solid fa-circle-info"></i> Source documents used different Product Attribute Templates for this benefit type — some attributes may not apply to every plan.
+    </div>
+
+    <div class="flex-1 overflow-auto px-6 py-4" id="sheetContent"></div>
+
+    <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+      <div class="flex items-center gap-1" id="sheetTabs"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Mock data ----------
+const productMeta = {
+  medical: { label: 'Medical', sections: {
+    t1: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Specialist Copay', 'Rx — Generic'],
+    t2: ['Deductible (Individual)', 'Deductible (Family)', 'Out-of-Pocket Max', 'Office Visit Copay', 'Telehealth Copay', 'Rx — Generic'],
+  }},
+  dental: { label: 'Dental', sections: { d1: ['Deductible', 'Preventive Coverage', 'Basic Coverage', 'Major Coverage', 'Orthodontia'] } },
+  vision: { label: 'Vision', sections: { v1: ['Exam Copay', 'Materials Copay', 'Frame Allowance'] } },
+};
+
+const documents = [
+  { id: 1, name: 'Acme_Renewal_BlueCross.pdf', client: 'Acme Corp', uploaded: '2026-06-20',
+    types: [{ type: 'medical', carrier: 'BlueCross', template: 't1', status: 'complete' }] },
+  { id: 2, name: 'Acme_Dental_Delta.pdf', client: 'Acme Corp', uploaded: '2026-06-22',
+    types: [{ type: 'dental', carrier: 'Delta Dental', template: 'd1', status: 'need_qa' }] },
+  { id: 3, name: 'Acme_Medical_Aetna.pdf', client: 'Acme Corp', uploaded: '2026-06-25',
+    types: [{ type: 'medical', carrier: 'Aetna', template: 't2', status: 'complete' }] },
+  { id: 4, name: 'BrightFutures_Combined.pdf', client: 'Bright Futures Inc', uploaded: '2026-06-18',
+    types: [
+      { type: 'medical', carrier: 'Cigna', template: 't1', status: 'need_qa' },
+      { type: 'dental', carrier: 'MetLife', template: 'd1', status: 'complete' },
+    ] },
+  { id: 5, name: 'Coastal_Vision_Guardian.pdf', client: 'Coastal Logistics', uploaded: '2026-06-15',
+    types: [{ type: 'vision', carrier: 'Guardian', template: 'v1', status: 'complete' }] },
+];
+
+const statusBadge = (status) => status === 'complete'
+  ? `<span class="status-pill bg-emerald-100 text-emerald-700"><i class="fa-solid fa-check text-[9px]"></i> Complete</span>`
+  : `<span class="status-pill bg-amber-100 text-amber-700"><i class="fa-solid fa-clock text-[9px]"></i> Needs QA</span>`;
+
+let selected = new Set();
+
+function renderTable() {
+  const body = document.getElementById('docTableBody');
+  body.innerHTML = documents.map(doc => `
+    <tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="pl-5 py-3"><input type="checkbox" class="checkbox-lg doc-check" data-id="${doc.id}" ${selected.has(doc.id) ? 'checked' : ''} onchange="toggleDoc(${doc.id}, this)"></td>
+      <td class="py-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-pdf text-red-400"></i>
+          <span class="font-medium text-slate-800">${doc.name}</span>
+        </div>
+      </td>
+      <td class="py-3 text-slate-600">${doc.client}</td>
+      <td class="py-3">
+        <div class="flex flex-wrap gap-1.5">
+          ${doc.types.map(t => `
+            <span class="inline-flex items-center gap-1.5 bg-slate-100 rounded-full pl-2 pr-2.5 py-1 text-xs">
+              <span class="font-semibold text-slate-700">${productMeta[t.type].label}</span>
+              ${statusBadge(t.status)}
+            </span>
+          `).join('')}
+        </div>
+      </td>
+      <td class="py-3 text-slate-500">${doc.uploaded}</td>
+    </tr>
+  `).join('');
+}
+
+function toggleDoc(id, el) {
+  if (el.checked) selected.add(id); else selected.delete(id);
+  updateBulkBar();
+  updateClientWarning();
+}
+
+function toggleAll(el) {
+  selected = new Set(el.checked ? documents.map(d => d.id) : []);
+  renderTable();
+  updateBulkBar();
+  updateClientWarning();
+}
+
+function clearSelection() {
+  selected.clear();
+  renderTable();
+  updateBulkBar();
+  updateClientWarning();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulkBar');
+  document.getElementById('selectedCount').textContent = selected.size;
+  bar.classList.toggle('hidden', selected.size === 0);
+}
+
+let clientWarningDismissed = false;
+function updateClientWarning() {
+  const selDocs = documents.filter(d => selected.has(d.id));
+  const clients = [...new Set(selDocs.map(d => d.client))];
+  const banner = document.getElementById('clientWarning');
+  if (clients.length > 1 && !clientWarningDismissed) {
+    document.getElementById('clientWarningDetail').textContent = `You've selected documents from: ${clients.join(', ')}. They'll be merged into one workbook.`;
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+  if (clients.length <= 1) clientWarningDismissed = false;
+}
+function dismissClientWarning() {
+  clientWarningDismissed = true;
+  document.getElementById('clientWarning').classList.add('hidden');
+}
+
+// ---------- Export flow ----------
+let pendingItems = [];
+let exportIncludesPending = false;
+
+function startExport() {
+  const selDocs = documents.filter(d => selected.has(d.id));
+  pendingItems = [];
+  selDocs.forEach(doc => doc.types.forEach(t => {
+    if (t.status === 'need_qa') pendingItems.push({ doc: doc.name, type: productMeta[t.type].label });
+  }));
+
+  if (pendingItems.length > 0) {
+    openQaModal();
+  } else {
+    exportIncludesPending = false;
+    buildPreview();
+  }
+}
+
+function openQaModal() {
+  document.getElementById('qaList').innerHTML = pendingItems.map(p => `
+    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+      <i class="fa-solid fa-clock text-amber-500"></i>
+      <div>
+        <div class="font-medium text-slate-800">${p.type}</div>
+        <div class="text-xs text-slate-500">${p.doc}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('qaModal').classList.remove('hidden');
+}
+function closeQaModal() { document.getElementById('qaModal').classList.add('hidden'); }
+function reviewNow() { closeQaModal(); alert('In the real product, this would take you to the QA review screen for the pending item(s).\n\n(No real navigation in this mockup.)'); }
+function exportAnyway() {
+  exportIncludesPending = true;
+  closeQaModal();
+  buildPreview();
+}
+
+// ---------- Preview builder ----------
+function buildPreview() {
+  const selDocs = documents.filter(d => selected.has(d.id));
+  const byType = {};
+  selDocs.forEach(doc => doc.types.forEach(t => {
+    byType[t.type] = byType[t.type] || [];
+    byType[t.type].push({ doc: doc.name, carrier: t.carrier, template: t.template, status: t.status });
+  }));
+
+  const types = Object.keys(byType);
+  window._previewData = { byType };
+
+  document.getElementById('sheetTabs').innerHTML = types.map((t, i) => `
+    <button onclick="renderSheet('${t}')" id="tab-${t}" class="text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${i === 0 ? 'bg-white text-indigo-700 border-slate-200' : 'bg-slate-100 text-slate-500 border-transparent'}">
+      <i class="fa-solid fa-table-cells text-[10px] mr-1"></i>${productMeta[t].label}
+    </button>
+  `).join('');
+
+  renderSheet(types[0]);
+  document.getElementById('previewModal').classList.remove('hidden');
+}
+
+function renderSheet(type) {
+  Object.keys(window._previewData.byType).forEach(t => {
+    const tab = document.getElementById(`tab-${t}`);
+    tab.className = `text-xs font-semibold px-3 py-1.5 rounded-t-lg border border-b-0 ${t === type ? 'bg-white text-indigo-700 border-slate-200' : 'bg-slate-100 text-slate-500 border-transparent'}`;
+  });
+
+  const plans = window._previewData.byType[type];
+  const templatesUsed = new Set(plans.map(p => p.template));
+  document.getElementById('templateFootnote').classList.toggle('hidden', templatesUsed.size <= 1);
+
+  const allSections = [...new Set(plans.flatMap(p => productMeta[type].sections[p.template]))];
+
+  let html = `<table class="sheet-grid border-collapse"><thead><tr><th class="text-left">Attribute</th>`;
+  plans.forEach(p => {
+    const flagged = exportIncludesPending && p.status === 'need_qa';
+    html += `<th class="${flagged ? 'bg-amber-100 text-amber-800' : ''}">
+      ${p.carrier}
+      ${flagged ? '<div class="text-[10px] font-semibold text-amber-600 mt-0.5"><i class="fa-solid fa-triangle-exclamation"></i> Pending QA</div>' : ''}
+      <div class="text-[10px] font-normal text-slate-400 mt-0.5">${p.doc}</div>
+    </th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  allSections.forEach(section => {
+    html += `<tr><td class="font-medium text-slate-700">${section}</td>`;
+    plans.forEach(p => {
+      const has = productMeta[type].sections[p.template].includes(section);
+      html += `<td class="${has ? 'text-slate-600' : 'text-slate-300'}">${has ? mockValue(section) : '—'}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  document.getElementById('sheetContent').innerHTML = html;
+}
+
+function mockValue(section) {
+  if (section.includes('Deductible')) return '$' + (Math.floor(Math.random()*3)+1) + ',500';
+  if (section.includes('Out-of-Pocket')) return '$' + (Math.floor(Math.random()*4)+4) + ',000';
+  if (section.includes('Copay')) return '$' + (Math.floor(Math.random()*4)*10 + 20);
+  if (section.includes('Rx')) return '$' + (Math.floor(Math.random()*3)*5 + 10);
+  if (section.includes('Coverage')) return (Math.floor(Math.random()*3)+7)*10 + '%';
+  if (section.includes('Allowance')) return '$' + (Math.floor(Math.random()*3)+1)*50;
+  if (section.includes('Orthodontia')) return '50% up to $1,500';
+  return '—';
+}
+
+function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
+
+renderTable();
+</script>
+</body>
+</html>
