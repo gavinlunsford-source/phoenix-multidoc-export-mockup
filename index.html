@@ -109,17 +109,42 @@
   <p class="text-xs text-gray-400 mt-4 text-center">Table columns, DataItemName layout, product-type Tag styling, and the rolled-up Status tag all match production — verified against AiDashboard.vue / DocumentAiTable.php / DocumentStatusTag.vue.</p>
 </div>
 
-<!-- Selection bar — corner radius matches Phoenix buttons (rounded-lg), not a full pill -->
+<!-- Selection bar — corner radius matches Phoenix buttons (rounded-lg), not a full pill. -->
+<!-- Generous gap between the count and the action cluster (like the Stripe reference), -->
+<!-- tighter spacing within the cluster itself. -->
 <div id="selectionBar" class="hidden fixed bottom-6 left-1/2 slide-up z-40">
-  <div class="bg-gray-900 text-white rounded-lg shadow-xl pl-4 pr-2 py-2 flex items-center gap-3">
+  <div class="bg-gray-900 text-white rounded-lg shadow-xl pl-5 pr-2 py-2.5 flex items-center gap-8">
     <span class="text-sm font-medium whitespace-nowrap"><span id="selectedCount">0</span> selected</span>
-    <div class="w-px h-5 bg-gray-700"></div>
-    <button onclick="startExport()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
-      <i class="fa-regular fa-file-excel"></i> Export to Excel
-    </button>
-    <button onclick="clearSelection()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors" aria-label="Clear selection">
-      <i class="fa-regular fa-xmark"></i>
-    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="openArchiveConfirm()" class="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+        <i class="fa-regular fa-box-archive"></i> Archive
+      </button>
+      <button onclick="startExport()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+        <i class="fa-regular fa-file-excel"></i> Export to Excel
+      </button>
+      <div class="w-px h-5 bg-gray-700 mx-1"></div>
+      <button onclick="clearSelection()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors" aria-label="Clear selection">
+        <i class="fa-regular fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Archive confirm — mirrors the existing single-row Archive action's confirm() copy, -->
+<!-- styled as Variant::Success (green) since archiving is reversible, not destructive. -->
+<div id="archiveModal" class="hidden fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 px-4">
+  <div class="bg-white rounded-2xl w-full shadow-xl fade-in" style="max-width:24rem">
+    <div class="p-6">
+      <div class="flex h-12 w-12 items-center justify-center rounded-lg px-2 py-2.5 shadow-sm bg-green-100 text-green-600 mb-4">
+        <i class="fa-regular fa-box-archive text-lg"></i>
+      </div>
+      <h2 class="mb-1 font-semibold text-gray-900">Archive Documents</h2>
+      <p id="archiveModalMessage" class="text-sm text-gray-600"></p>
+    </div>
+    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2 rounded-b-2xl bg-gray-50">
+      <button onclick="closeArchiveConfirm()" class="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2">Cancel</button>
+      <button onclick="confirmArchive()" class="text-sm font-semibold bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">Archive Documents</button>
+    </div>
   </div>
 </div>
 
@@ -323,6 +348,24 @@ function showToast({ summary, detail, life = 3000 }) {
   `;
   container.appendChild(el);
   setTimeout(() => el.remove(), life);
+}
+
+// ---------- Archive ----------
+function openArchiveConfirm() {
+  const count = selected.size;
+  document.getElementById('archiveModalMessage').textContent =
+    `Archiving will hide ${count === 1 ? 'this document' : `these ${count} documents`} from the list. Are you sure you want to archive ${count === 1 ? 'it' : 'them'}?`;
+  document.getElementById('archiveModal').classList.remove('hidden');
+}
+function closeArchiveConfirm() { document.getElementById('archiveModal').classList.add('hidden'); }
+function confirmArchive() {
+  const count = selected.size;
+  for (let i = documents.length - 1; i >= 0; i--) {
+    if (selected.has(documents[i].id)) documents.splice(i, 1);
+  }
+  closeArchiveConfirm();
+  clearSelection();
+  showToast({ summary: 'Archived', detail: `${count} document${count === 1 ? '' : 's'} archived and hidden from this list.` });
 }
 
 // ---------- Export flow ----------
