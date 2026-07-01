@@ -23,9 +23,9 @@
 <style>
   body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   .fade-in { animation: fadeIn .15s ease-out; }
-  .slide-up { animation: slideUp .18s cubic-bezier(.2,.9,.3,1); }
+  .slide-up { animation: slideUp .16s cubic-bezier(0.16, 1, 0.3, 1); }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 12px);} to { opacity: 1; transform: translate(-50%, 0);} }
+  @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 10px);} to { opacity: 1; transform: translate(-50%, 0);} }
   @keyframes toastIn { from { opacity:0; transform: translateX(16px);} to { opacity:1; transform: translateX(0);} }
   .toast-in { animation: toastIn .2s ease-out; }
   table.sheet-grid td, table.sheet-grid th { border: 1px solid #e5e7eb; padding: 6px 10px; font-size: 12.5px; white-space:nowrap; }
@@ -39,17 +39,6 @@
 <!-- Prototype banner -->
 <div class="bg-warning-200 text-warning-700 text-center text-xs font-semibold py-1.5">
   <i class="fa-solid fa-flask"></i> Interactive Prototype — table columns/cells copied from the real AiDashboard.vue + DocumentAiTable.php. Only the checkbox column is new.
-</div>
-
-<!-- Pattern toggle — compare the two Stripe interaction styles side by side -->
-<div class="bg-gray-900 py-2.5">
-  <div class="max-w-6xl mx-auto px-6 flex items-center gap-3">
-    <span class="text-xs text-gray-400 font-medium">Selection pattern:</span>
-    <div class="flex items-center bg-gray-800 rounded-lg p-1 gap-1">
-      <button id="patternBtn-floating" onclick="setPattern('floating')" class="text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">Floating bar</button>
-      <button id="patternBtn-inline" onclick="setPattern('inline')" class="text-xs font-semibold px-3 py-1.5 rounded-md transition-colors">Inline toolbar replacement</button>
-    </div>
-  </div>
 </div>
 
 <!-- App header -->
@@ -122,16 +111,16 @@
 <!-- Generous gap between the count and the action cluster (like the Stripe reference), -->
 <!-- tighter spacing within the cluster itself. -->
 <div id="selectionBar" class="hidden fixed bottom-6 left-1/2 slide-up z-40">
-  <div class="bg-gray-900 text-white rounded-lg shadow-xl pl-5 pr-2 py-2.5 flex items-center gap-8">
+  <div class="bg-gray-900 text-white rounded-lg shadow-xl pl-6 pr-3 py-3 flex items-center gap-10 min-w-[440px] justify-between">
     <span class="text-sm font-medium whitespace-nowrap"><span id="selectedCount">0</span> selected</span>
-    <div class="flex items-center gap-2">
-      <button onclick="openArchiveConfirm()" class="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+    <div class="flex items-center gap-2.5">
+      <button onclick="openArchiveConfirm()" class="bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
         <i class="fa-regular fa-box-archive"></i> Archive
       </button>
-      <button onclick="startExport()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
+      <button onclick="startExport()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition-colors whitespace-nowrap">
         <i class="fa-regular fa-file-excel"></i> Export to Excel
       </button>
-      <div class="w-px h-5 bg-gray-700 mx-1"></div>
+      <div class="w-px h-5 bg-gray-700 mx-1.5"></div>
       <button onclick="clearSelection()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors" aria-label="Clear selection">
         <i class="fa-regular fa-xmark"></i>
       </button>
@@ -161,7 +150,7 @@
 <!-- dashboard's own rolled-up Status tag logic), and a minimal template picker. -->
 <!-- Only shown when there's something to resolve; clean selections skip straight to download. -->
 <div id="exportModal" class="hidden fixed inset-0 bg-gray-900/40 flex items-center justify-center z-50 px-4">
-  <div class="bg-white rounded-2xl w-full shadow-xl fade-in" style="max-width:26rem">
+  <div class="bg-white rounded-2xl w-full shadow-xl fade-in" style="max-width:28rem">
     <div class="p-6">
       <div class="flex h-12 w-12 items-center justify-center rounded-lg px-2 py-2.5 shadow-sm bg-warning-100 text-warning-600 mb-4">
         <i class="fa-regular fa-file-excel text-lg"></i>
@@ -170,12 +159,16 @@
 
       <!-- QA section: one row per document, same tag used on the dashboard -->
       <div id="qaSection" class="hidden mb-4">
-        <div class="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden"></div>
+        <div class="text-sm font-medium text-gray-800">These haven't been approved yet</div>
+        <p class="text-xs text-gray-500 mt-0.5 mb-2">Approving confirms the extracted numbers are correct. You can still export now — we'll mark this data in the file so anyone reviewing it knows it hasn't been checked.</p>
+        <div class="qa-list divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden"></div>
       </div>
 
       <!-- Template section: one compact row per conflicting benefit type -->
       <div id="templateSection" class="hidden">
-        <div class="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden"></div>
+        <div class="text-sm font-medium text-gray-800">Choose a template</div>
+        <p class="text-xs text-gray-500 mt-0.5 mb-2">These documents used different templates for the same benefit type. Pick which one sets the rows for that sheet — the other plan(s) will still be included as columns, just without values for attributes outside your choice.</p>
+        <div class="template-list divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden"></div>
       </div>
     </div>
     <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-2 rounded-b-2xl bg-gray-50">
@@ -315,66 +308,16 @@ function clearSelection() {
   updateClientWarning();
 }
 
-// ---------- Two selection patterns, toggle-able for engineer review ----------
-// 'floating'  = Stripe's floating pill at the bottom, header stays static
-// 'inline'    = Stripe's other pattern: the header's "New Extraction" button is
-//               replaced in place by "N selected · Deselect · [actions]"
-let interactionPattern = 'floating';
-
-function setPattern(pattern) {
-  interactionPattern = pattern;
-  ['floating', 'inline'].forEach(p => {
-    const btn = document.getElementById(`patternBtn-${p}`);
-    btn.className = `text-xs font-semibold px-3 py-1.5 rounded-md transition-colors ${
-      p === pattern ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-gray-200'
-    }`;
-  });
-  updateSelectionUI();
-}
-
-const newExtractionButton = `
+// Chosen direction: the floating bar. Header stays static — the table itself
+// is unchanged apart from the checkbox column.
+document.getElementById('headerActions').innerHTML = `
   <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
     <i class="fa-regular fa-plus text-xs"></i> New Extraction
   </button>`;
 
-// Light-mode action buttons for the inline header cluster (sits on a white bg,
-// unlike the floating pill which sits on a dark one).
-function inlineClusterHtml(count) {
-  return `
-    <div class="flex items-center gap-4 fade-in">
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-700"><span class="font-semibold">${count}</span> selected</span>
-        <div class="h-4 w-px bg-gray-300"></div>
-        <button onclick="clearSelection()" class="text-sm font-medium text-gray-900 underline decoration-gray-300 hover:decoration-gray-900 underline-offset-2">Deselect</button>
-      </div>
-      <div class="flex items-center gap-2">
-        <button onclick="openArchiveConfirm()" class="rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
-          <i class="fa-regular fa-box-archive"></i> Archive
-        </button>
-        <button onclick="startExport()" class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-3.5 py-2 flex items-center gap-2 transition-colors">
-          <i class="fa-regular fa-file-excel"></i> Export to Excel
-        </button>
-      </div>
-    </div>`;
-}
-
-function renderHeaderActions() {
-  const el = document.getElementById('headerActions');
-  if (interactionPattern === 'inline' && selected.size > 0) {
-    el.innerHTML = inlineClusterHtml(selected.size);
-  } else {
-    el.innerHTML = newExtractionButton;
-  }
-}
-
 function updateSelectionUI() {
   document.getElementById('selectedCount').textContent = selected.size;
-
-  const floatingBar = document.getElementById('selectionBar');
-  const showFloating = interactionPattern === 'floating' && selected.size > 0;
-  floatingBar.classList.toggle('hidden', !showFloating);
-
-  renderHeaderActions();
+  document.getElementById('selectionBar').classList.toggle('hidden', selected.size === 0);
 }
 
 let clientWarningDismissed = false;
@@ -481,7 +424,7 @@ function openExportModal(templateConflicts, hasTemplateConflicts, hasPending) {
   const qaWrap = document.getElementById('qaSection');
   if (hasPending) {
     qaWrap.classList.remove('hidden');
-    qaWrap.querySelector('div').innerHTML = pendingDocs.map(d => `
+    qaWrap.querySelector('.qa-list').innerHTML = pendingDocs.map(d => `
       <div class="flex items-center justify-between px-3 py-2.5 bg-white">
         <div class="flex items-center gap-2.5 min-w-0">
           <i class="fa-solid fa-file-pdf text-red-400"></i>
@@ -500,7 +443,7 @@ function openExportModal(templateConflicts, hasTemplateConflicts, hasPending) {
   const templateWrap = document.getElementById('templateSection');
   if (hasTemplateConflicts) {
     templateWrap.classList.remove('hidden');
-    templateWrap.querySelector('div').innerHTML = Object.entries(templateConflicts).map(([type, c]) => `
+    templateWrap.querySelector('.template-list').innerHTML = Object.entries(templateConflicts).map(([type, c]) => `
       <div class="flex items-center justify-between px-3 py-2.5 bg-white gap-3">
         <span class="text-sm text-gray-800 whitespace-nowrap">${productMeta[type].label} template</span>
         <select class="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white" onchange="chosenTemplate['${type}'] = this.value">
@@ -628,7 +571,6 @@ function mockValue(section) {
 function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
 
 renderTable();
-setPattern('floating');
 </script>
 </body>
 </html>
